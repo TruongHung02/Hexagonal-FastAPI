@@ -5,12 +5,14 @@ from datetime import timedelta, datetime
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
+from src.infrastructure.cache import get_redis_dependency
 from src.infrastructure.database import get_db
 from src.infrastructure.config import settings
 from src.infrastructure.repositories.mysql_product_repository import MySQLProductRepository
 from src.infrastructure.repositories.mysql_user_repository import MySQLUserRepository
-from src.application.services import ProductServiceImpl, UserServiceImpl
+from src.application.services import ProductServiceImpl, UserServiceImpl, CacheServiceImpl
 from src.domain.models import Product, User
 from src.interfaces.api.schemas import (
     ProductCreate, ProductUpdate, ProductResponse,
@@ -25,14 +27,15 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 
 
 # Dependencies
-async def get_product_service(db: AsyncSession = Depends(get_db)):
+async def get_product_service(db: AsyncSession = Depends(get_db), cache: Redis = Depends(get_redis_dependency)):
     repository = MySQLProductRepository(db)
-    return ProductServiceImpl(repository)
+    return ProductServiceImpl(repository, cache)
 
 
 async def get_user_service(db: AsyncSession = Depends(get_db)):
     repository = MySQLUserRepository(db)
     return UserServiceImpl(repository)
+
 
 # OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
